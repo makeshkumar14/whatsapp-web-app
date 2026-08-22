@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* ── Design Tokens ────────────────────────────────────────────── */
+:root {
+  --color-primary: #4f46e5;       /* Modern Indigo */
+  --color-primary-hover: #4338ca;
+  --color-primary-light: #eef2ff;
+  --color-bg: #f8fafc;            /* Clean light slate background */
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text-main: #0f172a;
+  --color-text-muted: #64748b;
+  --color-sent-bg: #4f46e5;      /* Sent bubble indigo */
+  --color-sent-text: #ffffff;
+  --color-recv-bg: #f1f5f9;      /* Recv bubble light grey */
+  --color-recv-text: #0f172a;
+}
+
+/* ── Reset & Base ───────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbars ────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 99px;
+}
+
+/* ── Message Animations ────────────────────────────────────── */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.msg-in {
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── User Row Hover ────────────────────────────────────────── */
+.user-row {
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.user-row:hover {
+  background-color: #f1f5f9;
+}
+.user-row:active {
+  transform: scale(0.995);
+}
+
+/* ── Input Glow ────────────────────────────────────────────── */
+.msg-input:focus {
+  outline: none;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+/* ── Send Button ───────────────────────────────────────────── */
+.btn-send {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.btn-send:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+  transform: translateY(-1px);
+}
+.btn-send:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* ── Pulse Indicator ───────────────────────────────────────── */
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50%      { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+}
+.online-dot {
+  animation: pulse-ring 2s infinite;
+}
+
+/* ── Fade Up Animation ─────────────────────────────────────── */
+.fade-up {
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Emoji Picker Modern Overrides ─────────────────────────── */
+.EmojiPickerReact {
+  --epr-bg-color: #ffffff !important;
+  --epr-category-label-bg-color: #f8fafc !important;
+  --epr-hover-bg-color: #eef2ff !important;
+  --epr-focus-bg-color: #e0e7ff !important;
+  --epr-highlight-color: #4f46e5 !important;
+  --epr-search-border-color: #e2e8f0 !important;
+  --epr-search-input-bg-color: #f1f5f9 !important;
+  --epr-search-input-text-color: #0f172a !important;
+  --epr-text-color: #64748b !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05) !important;
+  border-radius: 20px !important;
+}

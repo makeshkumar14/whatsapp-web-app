@@ -14,6 +14,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import EmojiPicker from "emoji-picker-react";
+import emailjs from "@emailjs/browser";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { getChatId } from "../utils/getChatId";
@@ -173,6 +174,35 @@ export default function ChatWindow({ peer, onBack }) {
         timestamp: serverTimestamp(),
       });
       setText("");
+
+      // Send EmailJS email notification to peer if email exists
+      if (peer?.email) {
+        const serviceId =
+          import.meta.env.VITE_EMAILJS_SERVICE_ID || "service_rwli3eg";
+        const templateId =
+          import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "template_89u4hos";
+        const publicKey =
+          import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "KhzjJWfsEY9u2NeI9";
+
+        const templateParams = {
+          to_email: peer.email,
+          email: peer.email,
+          recipient_email: peer.email,
+          to_name: peer.name || "there",
+          recipient_name: peer.name || "there",
+          from_name: user.displayName || user.email?.split("@")[0] || "Someone",
+          sender_name: user.displayName || user.email?.split("@")[0] || "Someone",
+          from_email: user.email,
+          sender_email: user.email,
+          message: trimmed,
+          message_text: trimmed,
+          reply_to: user.email,
+        };
+
+        emailjs.send(serviceId, templateId, templateParams, publicKey).catch((err) => {
+          console.warn("EmailJS notification skipped or failed:", err);
+        });
+      }
     } catch (err) {
       console.error("Send failed", err);
       setText(trimmed);

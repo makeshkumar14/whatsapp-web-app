@@ -16,6 +16,7 @@ export default function ChatList({ onSelectUser }) {
 
   const lastReadRef = useRef({});
   const latestDocsRef = useRef({});
+  const searchInputRef = useRef(null);
 
   // Subscribe to own user doc for lastRead timestamps
   useEffect(() => {
@@ -61,6 +62,7 @@ export default function ChatList({ onSelectUser }) {
               text: latest.text || null,
               timestamp: latest.timestamp,
               senderId: latest.senderId,
+              deleted: latest.deleted || false,
             },
           }));
         }
@@ -94,10 +96,20 @@ export default function ChatList({ onSelectUser }) {
     return tb - ta;
   });
 
-  const filtered = sorted.filter((u) =>
-    u.name?.toLowerCase().includes(search.toLowerCase()) ||
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Active chats only (where messages have been exchanged)
+  const activeUsers = sorted.filter((u) => {
+    const last = lastMessages[u.uid];
+    return Boolean(last?.text || last?.timestamp);
+  });
+
+  // When searching, search through ALL registered users; otherwise show active conversations
+  const isSearching = search.trim().length > 0;
+  const displayList = isSearching
+    ? sorted.filter((u) =>
+        u.name?.toLowerCase().includes(search.toLowerCase()) ||
+        u.email?.toLowerCase().includes(search.toLowerCase())
+      )
+    : activeUsers;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, background: "#ffffff" }}>
@@ -105,7 +117,7 @@ export default function ChatList({ onSelectUser }) {
       <div style={{ padding: "16px 16px 12px 16px", borderBottom: "1px solid #f1f5f9" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <h2 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", margin: 0, tracking: "-0.02em" }}>
-            Messages
+            {isSearching ? "Search Contacts" : "Messages"}
           </h2>
           <span style={{
             fontSize: 12,
@@ -115,7 +127,9 @@ export default function ChatList({ onSelectUser }) {
             padding: "4px 10px",
             borderRadius: 20,
           }}>
-            {users.length} {users.length === 1 ? "Contact" : "Contacts"}
+            {isSearching
+              ? `${displayList.length} Found`
+              : `${activeUsers.length} ${activeUsers.length === 1 ? "Chat" : "Chats"}`}
           </span>
         </div>
 
@@ -129,14 +143,15 @@ export default function ChatList({ onSelectUser }) {
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
           <input
+            ref={searchInputRef}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search conversations..."
+            placeholder="Search by Gmail address or Name…"
             className="msg-input"
             style={{
               width: "100%",
-              padding: "9px 14px 9px 38px",
+              padding: "9px 36px 9px 38px",
               border: "1px solid #e2e8f0",
               borderRadius: 14,
               background: "#f8fafc",
@@ -147,6 +162,30 @@ export default function ChatList({ onSelectUser }) {
               transition: "all 0.15s ease",
             }}
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              style={{
+                position: "absolute",
+                right: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 4,
+                color: "#94a3b8",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -172,35 +211,70 @@ export default function ChatList({ onSelectUser }) {
           </li>
         )}
 
-        {!loading && !error && filtered.length === 0 && (
-          <li style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "48px 0" }}>
+        {!loading && !error && displayList.length === 0 && (
+          <li style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "60px 20px", textAlign: "center" }}>
             <div style={{
-              width: 56,
-              height: 56,
-              borderRadius: 20,
-              background: "#f1f5f9",
+              width: 64,
+              height: 64,
+              borderRadius: 24,
+              background: "#eef2ff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              boxShadow: "0 4px 12px rgba(79, 70, 229, 0.12)",
             }}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
+              {isSearching ? (
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              ) : (
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="1.8">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              )}
             </div>
-            <div style={{ textAlign: "center" }}>
-              <p style={{ color: "#334155", fontSize: 14, fontWeight: 600, margin: 0 }}>
-                {search ? "No matches found" : "No contacts yet"}
+            <div>
+              <p style={{ color: "#1e293b", fontSize: 16, fontWeight: 700, margin: 0 }}>
+                {isSearching ? "No users found" : "No conversations yet"}
               </p>
-              <p style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
-                {search ? "Try searching another name" : "Sign in from another account to chat"}
+              <p style={{ color: "#64748b", fontSize: 13, marginTop: 6, lineHeight: 1.45, maxWidth: 280 }}>
+                {isSearching
+                  ? `No registered user matches "${search}". Check the Gmail spelling and try again.`
+                  : "Type someone's Gmail address or name above to start your first chat!"}
               </p>
             </div>
+            {!isSearching && (
+              <button
+                type="button"
+                onClick={() => searchInputRef.current?.focus()}
+                style={{
+                  marginTop: 8,
+                  padding: "9px 18px",
+                  borderRadius: 12,
+                  background: "#4f46e5",
+                  color: "#ffffff",
+                  border: "none",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  boxShadow: "0 2px 8px rgba(79, 70, 229, 0.3)",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                Search by Gmail
+              </button>
+            )}
           </li>
         )}
 
-        {filtered.map((profile, i) => {
+        {displayList.map((profile, i) => {
           const last = lastMessages[profile.uid];
           const unread = unreadCounts[profile.uid] ?? 0;
           const isUnread = unread > 0;
@@ -209,6 +283,7 @@ export default function ChatList({ onSelectUser }) {
           const isLastRead = isOwnLast && checkIsRead(last, profile.lastRead?.[chatId], user.uid);
           const isPeerTyping = Boolean(profile.typing?.[chatId]);
           const isLastDeleted = Boolean(last?.deleted);
+          const hasChatHistory = Boolean(last?.text || last?.timestamp);
 
           let preview = "";
           if (last?.text) {
@@ -220,7 +295,10 @@ export default function ChatList({ onSelectUser }) {
               <button
                 type="button"
                 id={`chat-user-${profile.uid}`}
-                onClick={() => onSelectUser(profile)}
+                onClick={() => {
+                  setSearch("");
+                  onSelectUser(profile);
+                }}
                 className="user-row"
                 style={{
                   display: "flex",
@@ -341,15 +419,21 @@ export default function ChatList({ onSelectUser }) {
                                 ? "#94a3b8"
                                 : isUnread
                                 ? "#1e293b"
-                                : "#64748b",
-                              fontWeight: isUnread && !isLastDeleted ? 600 : 400,
+                                : hasChatHistory
+                                ? "#64748b"
+                                : "#4f46e5",
+                              fontWeight: isUnread && !isLastDeleted ? 600 : hasChatHistory ? 400 : 500,
                               fontStyle: isLastDeleted ? "italic" : "normal",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {preview || <span style={{ fontStyle: "italic", color: "#cbd5e1" }}>No messages yet</span>}
+                            {preview || (
+                              <span style={{ color: "#6366f1", fontSize: 12, fontWeight: 500 }}>
+                                ✉️ {profile.email || "Tap to start conversation"}
+                              </span>
+                            )}
                           </p>
                         </>
                       )}

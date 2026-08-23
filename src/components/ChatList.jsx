@@ -204,10 +204,15 @@ export default function ChatList({ onSelectUser }) {
           const last = lastMessages[profile.uid];
           const unread = unreadCounts[profile.uid] ?? 0;
           const isUnread = unread > 0;
+          const chatId = getChatId(user.uid, profile.uid);
+          const isOwnLast = last?.senderId === user.uid;
+          const isLastRead = isOwnLast && checkIsRead(last, profile.lastRead?.[chatId], user.uid);
+          const isPeerTyping = Boolean(profile.typing?.[chatId]);
+          const isLastDeleted = Boolean(last?.deleted);
 
           let preview = "";
           if (last?.text) {
-            preview = last.senderId === user.uid ? `You: ${last.text}` : last.text;
+            preview = isLastDeleted ? "🚫 This message was deleted" : last.text;
           }
 
           return (
@@ -247,7 +252,7 @@ export default function ChatList({ onSelectUser }) {
                       height: 11,
                       width: 11,
                       borderRadius: "50%",
-                      background: "#22c55e",
+                      background: isPeerTyping ? "#16a34a" : "#22c55e",
                       border: "2px solid #ffffff",
                     }}
                   />
@@ -255,7 +260,7 @@ export default function ChatList({ onSelectUser }) {
 
                 {/* Contact Name & Last Message */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                  <div style={{ display: "flex", borderBottom: "none", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                     <p
                       style={{
                         fontSize: 15,
@@ -284,19 +289,71 @@ export default function ChatList({ onSelectUser }) {
                   </div>
 
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginTop: 3 }}>
-                    <p
-                      style={{
-                        fontSize: 13,
-                        margin: 0,
-                        color: isUnread ? "#1e293b" : "#64748b",
-                        fontWeight: isUnread ? 600 : 400,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {preview || <span style={{ fontStyle: "italic", color: "#cbd5e1" }}>No messages yet</span>}
-                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0, flex: 1 }}>
+                      {isPeerTyping ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 13, color: "#16a34a", fontWeight: 700 }}>
+                            typing
+                          </span>
+                          <span className="typing-dots" style={{ display: "inline-flex", gap: 2 }}>
+                            <span className="typing-dot" />
+                            <span className="typing-dot" style={{ animationDelay: "0.2s" }} />
+                            <span className="typing-dot" style={{ animationDelay: "0.4s" }} />
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          {isOwnLast && last?.text && !isLastDeleted && (
+                            <span
+                              title={isLastRead ? "Read by recipient" : "Delivered"}
+                              style={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}
+                            >
+                              <svg
+                                width="14"
+                                height="10"
+                                viewBox="0 0 16 11"
+                                fill="none"
+                                style={{
+                                  transition: "stroke 0.2s ease",
+                                }}
+                              >
+                                <path
+                                  d="M1 5.5L5 9.5L15 1.5"
+                                  stroke={isLastRead ? "#0284c7" : "#94a3b8"}
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M5 5.5L9 9.5"
+                                  stroke={isLastRead ? "#0284c7" : "#94a3b8"}
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                            </span>
+                          )}
+                          <p
+                            style={{
+                              fontSize: 13,
+                              margin: 0,
+                              color: isLastDeleted
+                                ? "#94a3b8"
+                                : isUnread
+                                ? "#1e293b"
+                                : "#64748b",
+                              fontWeight: isUnread && !isLastDeleted ? 600 : 400,
+                              fontStyle: isLastDeleted ? "italic" : "normal",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {preview || <span style={{ fontStyle: "italic", color: "#cbd5e1" }}>No messages yet</span>}
+                          </p>
+                        </>
+                      )}
+                    </div>
 
                     {isUnread && (
                       <span
@@ -326,7 +383,20 @@ export default function ChatList({ onSelectUser }) {
           );
         })}
       </ul>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .typing-dot {
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: #16a34a;
+          animation: bounceDot 1.2s infinite ease-in-out;
+        }
+        @keyframes bounceDot {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+          40% { transform: scale(1.2); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -340,6 +410,16 @@ function countUnread(docs, peerUid, lastReadTimestamp) {
     if (!m.timestamp?.toDate) return false;
     return m.timestamp.toDate() > lr;
   }).length;
+}
+
+function checkIsRead(msg, peerLastRead, currentUserId) {
+  if (!msg || msg.senderId !== currentUserId) return false;
+  if (!peerLastRead || !msg.timestamp) return false;
+
+  const peerMillis = peerLastRead.toMillis ? peerLastRead.toMillis() : (peerLastRead.seconds ? peerLastRead.seconds * 1000 : 0);
+  const msgMillis = msg.timestamp.toMillis ? msg.timestamp.toMillis() : (msg.timestamp.seconds ? msg.timestamp.seconds * 1000 : 0);
+
+  return peerMillis > 0 && msgMillis > 0 && peerMillis >= msgMillis;
 }
 
 function avatarFallback(name) {
